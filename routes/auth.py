@@ -3,40 +3,59 @@ from core.security import hash_password
 from schemas.user import UserCreate
 from models.user import User
 from app.database import SessionLocal
-from schemas.login import LoginRequest
 from core.security import verify_password
 from core.jwt import create_access_token
 from fastapi import HTTPException
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordRequestForm
+
 router = APIRouter()
 @router.post("/register")
-
-def register(user:UserCreate):
+def register(user: UserCreate):
     db = SessionLocal()
-    hashed_password = hash_password(
-        user.password
+
+    existing_user = (
+        db.query(User)
+        .filter(User.email == user.email)
+        .first()
     )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    hashed_password = hash_password(user.password)
+
     new_user = User(
         username=user.username,
         email=user.email,
         password=hashed_password
     )
+
     db.add(new_user)
     db.commit()
+
     response = {
-       "message": "User created",
-       "id": new_user.id
+        "message": "User created",
+        "id": new_user.id
     }
 
     db.close()
     return response
 
 @router.post("/login")
-def login(user: LoginRequest):
+def login(
+    form_data: OAuth2PasswordRequestForm= Depends()
+):
+    email = form_data.username
+    password = form_data.password
     db = SessionLocal()
 
     db_user = (
         db.query(User)
-        .filter((User.email == user.email))
+        .filter((User.email == email))
         .first()
     )
     if not db_user:
@@ -45,7 +64,7 @@ def login(user: LoginRequest):
         detail="Invalid credentials"
     )
 
-    if not verify_password(user.password, db_user.password):
+    if not verify_password(password, db_user.password):
         raise HTTPException(
         status_code=401,
         detail="Invalid credentials"
@@ -53,6 +72,7 @@ def login(user: LoginRequest):
     token = create_access_token(
         {"sub": db_user.email}
     )
+    db.close()
     return {
         "access_token": token,
         "token_type": "bearer"
@@ -73,32 +93,19 @@ def get_users():
         }
         for user in users
     ]
-@router.get("/secret")
-
-def  secret():
-    return {
-        "message":"Protected data"
-    }
-from fastapi import Depends
-from core.dependencies import get_current_user
 
 from fastapi import Depends
 from core.dependencies import get_current_user
 
 @router.get("/me")
 def get_me(
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return {
         "id": current_user.id,
         "username": current_user.username,
         "email": current_user.email
     }
-from fastapi import Header
-
-@router.get("/test-token")
-def test_token(authorization: str = Header()):
-    return {"token": authorization}
 from fastapi import Header
 from core.jwt import verify_token
 
@@ -118,15 +125,6 @@ def test_jwt(
     payload = verify_token(token)
 
     return payload
-@router.get("/debug-jwt")
-def debug_jwt(token: str):
-    return {
-        "token": token,
-        "length": len(token)
-    }
-@router.get("/force-decode")
-def force_decode(token: str):
-    return verify_token(token)
 @router.get("/protected-test")
 def protected_test(
     current_user = Depends(get_current_user)
@@ -157,19 +155,19 @@ def headers(
     return {
         "authorization": authorization
     }
-@router.get("/protected-test")
-def protected_test(
-    current_user = Depends(get_current_user)
-):
-    return {
-        "id": current_user.id,
-        "email": current_user.email
-    }
+
+from core.jwt import verify_token
+
+
 @router.get("/force-user")
 def force_user(token: str):
+
     payload = verify_token(token)
 
-    email = payload["sub"]
+    if payload is None:
+        return {"error": "Invalid token"}
+
+    email = payload.get("sub")
 
     db = SessionLocal()
 
@@ -178,6 +176,11 @@ def force_user(token: str):
         .filter(User.email == email)
         .first()
     )
+
+    db.close()
+
+    if not user:
+        return {"error": "User not found"}
 
     return {
         "id": user.id,

@@ -6,8 +6,12 @@ ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
     to_encode = data.copy()
+
     expire = datetime.utcnow() + timedelta(hours=1)
-    to_encode.update({"exp": expire})
+
+    to_encode.update({
+        "exp": expire
+    })
 
     return jwt.encode(
         to_encode,
@@ -24,6 +28,5 @@ def verify_token(token: str):
         )
         return payload
 
-    except Exception as e:
-        print("JWT ERROR:", repr(e))   # IMPORTANT
+    except JWTError:
         return None

@@ -7,6 +7,9 @@ from models.decision import Decision
 # app/main.py
 from routes.auth import router as auth_router
 from models.reflection import Reflection
+from routes.analytics import (
+    router as analytics_router
+)
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
@@ -27,6 +30,7 @@ from routes.decisions import router as decision_router
 app.include_router(auth_router)
 app.include_router(decision_router)
 app.include_router(reflection_router)
+app.include_router(analytics_router)
 from sqlalchemy import inspect
 
 @app.get("/decision-columns")

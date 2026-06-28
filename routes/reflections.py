@@ -14,7 +14,9 @@ from schemas.reflection import (
     ReflectionCreate,
     ReflectionResponse
 )
-
+from services.ai_reflection import (
+    generate_ai_reflection
+)
 from core.dependencies import get_current_user
 
 router = APIRouter(
@@ -92,5 +94,53 @@ def get_reflections(
     db.close()
     return reflections
 
+@router.post("/ai-reflect/{decision_id}")
+
+def ai_reflect(
+    decision_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    db = SessionLocal()
+
+    decision = (
+        db.query(Decision)
+        .filter(
+            Decision.id == decision_id,
+            Decision.user_id == current_user.id
+        )
+        .first()
+    )
+    if not decision:
+        db.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Decision not found"
+        )
     
+    reflections = (
+        db.query(Reflection)
+        .filter(
+            Reflection.decision_id == decision_id
+        )
+        .all()
+    )
+    reflection_texts = [
+        reflection.reflection_text
+        for reflection in reflections
+    ]
+    ai_output = generate_ai_reflection(
+        decision.decision_text,
+        reflection_texts
+    )
+
+    if reflections:
+        reflections[-1].ai_summary = ai_output
+
+        db.commit()
+
+    db.close()
+    return {
+        "ai reflection": ai_output
+    }    
 

@@ -1,5 +1,8 @@
 import requests
-
+import os
+from dotenv import load_dotenv
+OLLAMA_URL = os.getenv("OLLAMA_URL")
+MODEL_NAME = os.getenv("OLLAMA_MODEL")
 
 def generate_ai_reflection(
     decision_text: str,

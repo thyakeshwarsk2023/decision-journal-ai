@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.database import SessionLocal
+from app.database import get_db
+from sqlalchemy.orm import Session
 from core.dependencies import get_current_user
 
 from models.user import User
@@ -21,12 +22,12 @@ router = APIRouter(
 )
 def create_decision(
     decision: DecisionCreate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db : Session = Depends(get_db)
 ):
 
-    db = SessionLocal()
 
-    new_decision = Decision(
+       new_decision = Decision(
 
         user_id=current_user.id,
 
@@ -43,26 +44,19 @@ def create_decision(
         future_feeling=decision.future_feeling,
 
         days_to_decide=decision.days_to_decide
-    )
-
-    db.add(new_decision)
-
-    db.commit()
-
-    db.refresh(new_decision)
-
-    db.close()
-
-    return new_decision
+        )
+       db.add(new_decision)
+       db.commit()
+       db.refresh(new_decision)
+       return new_decision
 @router.get(
     "",
     response_model=list[DecisionResponse]
 )
 def get_decisions(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-
-    db = SessionLocal()
 
     decisions = (
         db.query(Decision)
@@ -72,7 +66,7 @@ def get_decisions(
         .all()
     )
 
-    db.close()
+   
 
     return decisions
 @router.get(
@@ -81,10 +75,11 @@ def get_decisions(
 )
 def get_decision(
     decision_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+      db: Session = Depends(get_db)
 ):
 
-    db = SessionLocal()
+    
 
     decision = (
         db.query(Decision)
@@ -95,7 +90,7 @@ def get_decision(
         .first()
     )
 
-    db.close()
+    
 
     if not decision:
         raise HTTPException(
@@ -111,11 +106,11 @@ def get_decision(
 def update_outcome(
     decision_id: int,
     outcome: OutcomeUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
 
-    db = SessionLocal()
-
+   
     decision = (
         db.query(Decision)
         .filter(
@@ -127,7 +122,7 @@ def update_outcome(
 
     if not decision:
 
-        db.close()
+       
 
         raise HTTPException(
             status_code=404,
@@ -140,16 +135,16 @@ def update_outcome(
 
     db.refresh(decision)
 
-    db.close()
 
     return decision
 @router.delete("/{decision_id}")
 def delete_decision(
     decision_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
 
-    db = SessionLocal()
+    
 
     decision = (
         db.query(Decision)
@@ -161,7 +156,7 @@ def delete_decision(
     )
 
     if not decision:
-        db.close()
+        
 
         raise HTTPException(
             status_code=404,
@@ -172,7 +167,7 @@ def delete_decision(
 
     db.commit()
 
-    db.close()
+   
 
     return {
         "message": "Decision deleted successfully"

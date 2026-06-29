@@ -5,7 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey
 )
-
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
@@ -32,4 +32,8 @@ class Reflection(Base):
     created_at = Column(
         DateTime,
         default=datetime.utcnow
+    )
+    decision = relationship(
+    "Decision",
+    back_populates="reflections"
     )

@@ -8,8 +8,12 @@ from sqlalchemy import (
 )
 
 from datetime import datetime
-
+from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.orm import relationship
+
+
+
 
 
 class Decision(Base):
@@ -73,6 +77,16 @@ class Decision(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+    user = relationship(
+    "User",
+    back_populates="decisions"
+    )
+    reflections = relationship(
+    "Reflection",
+    back_populates="decision"
+    )
+   
+    
 
 
 

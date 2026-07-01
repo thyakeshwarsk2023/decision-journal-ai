@@ -6,7 +6,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL")
-OLLAMA_MODEL = os.getenv("OLLAMA_MDOEL")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
+
+if not OLLAMA_URL:
+    raise ValueError("OLLAMA_URL not found in .env")
+
+if not OLLAMA_MODEL:
+    raise ValueError("OLLAMA_MODEL not found in .env")
+
 
 def generate_response(prompt: str) -> str:
     try:

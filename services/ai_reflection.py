@@ -1,18 +1,35 @@
-import requests
-import os
-from dotenv import load_dotenv
-OLLAMA_URL = os.getenv("OLLAMA_URL")
-MODEL_NAME = os.getenv("OLLAMA_MODEL")
+from services.local_llm import generate_response
+from services.bias_engine import COGNITIVE_BIASES
+from services.mental_models import MENTAL_MODELS
 
 def generate_ai_reflection(
     decision_text: str,
     reflections: list[str]
-):
-
+)-> str:
     reflection_text = "\n".join(reflections)
+    biases = "\n".join(
+        f"- {bias.replace('_',' ').title()}"
+        for bias in COGNITIVE_BIASES.keys()
+    )
+
+    mental_models = "\n".join(
+        f"- {model.replace('_', ' ').title()}"
+        for model in MENTAL_MODELS.keys()
+    )
 
     prompt = f"""
-You are an expert in psychology and decision-making.
+You are an expert in:
+
+- Psychology
+- Decision Science
+- Behavioral Economics
+- Critical Thinking
+- Mental Models
+
+Analyze the user's decision using the following cognitive biases:
+{biases}
+Use the following mental models where appropriate:
+{mental_models}
 
 Decision:
 {decision_text}
@@ -23,20 +40,14 @@ User Reflections:
 Provide:
 
 1. Short summary
-2. Possible cognitive biases
-3. Alternative viewpoints
-4. Two questions for future reflection
+2. Possible cognitive biases affecting the decision.
+3.Relevant mental models that should be applied.
+4. Alternative viewpoints.
+5.Long-term consequences and second-order effects.
+6. Two powerful questions for future reflection
 
-Keep the response concise.
+Focus on improving the quality of the decision-making process rather than merely judging the outcome.
+
+Keep the response concise, practical and intellectually honest.
 """
-
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": "llama3.2:3b",
-            "prompt": prompt,
-            "stream": False
-        }
-    )
-
-    return response.json()["response"]
+    return generate_response(prompt)

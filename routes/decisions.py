@@ -1,9 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-
+from services.memory_service import (
+    store_decision_memory,
+    delete_memory
+)
 from app.database import get_db
 from sqlalchemy.orm import Session
 from core.dependencies import get_current_user
-
+from services.memory_service import (
+    store_decision_memory,
+)    
 from models.user import User
 from models.decision import Decision
 
@@ -48,6 +53,15 @@ def create_decision(
        db.add(new_decision)
        db.commit()
        db.refresh(new_decision)
+       try:
+           store_decision_memory(
+               decision_id=new_decision.id,
+               title=new_decision.title,
+               decision_text=new_decision.decision_text,
+               user_id=current_user.id
+            )
+       except Exception as e:
+           print(f"Memory storage failed: {e}")     
        return new_decision
 @router.get(
     "",
@@ -166,8 +180,10 @@ def delete_decision(
     db.delete(decision)
 
     db.commit()
-
-   
+    try:
+        delete_memory(decision.id)
+    except Exception as e:
+        print(f"Memory deletion failed: {e}")
 
     return {
         "message": "Decision deleted successfully"
